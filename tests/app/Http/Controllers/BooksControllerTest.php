@@ -1,7 +1,7 @@
 <?php
 
 namespace Tests\App\Http\Controller;
-
+use Database\Factories\ModelFactory;
 use Laravel\Lumen\Testing\DatabaseMigrations;
 use Laravel\Lumen\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -9,41 +9,42 @@ use Tests\TestCase;
 class BooksControllerTest extends TestCase
 {
     use DatabaseMigrations;
-    /** @test **/
+    
+    /** @test */
     public function index_status_code_should_be_200()
     {
         $this->get('/books')->seeStatusCode(200);
     }
-
-    /** @test **/
+    
+    /** @test */
     public function index_should_return_a_collection_of_records()
     {
-        $books = Factory('App\Book', 2)->create();
+        $books = ModelFactory::new()->count(2)->create();
         $this->get('/books');
         foreach ($books as $book) {
             $this->seeJson(['title' => $book->title]);
         }
     }
 
-    /** @test **/
+    /** @test */
     public function show_should_return_a_valid_book()
     {
-        $book = factory('\App\Book')->create();
+        $book = ModelFactory::new()->create();
         $this
-            ->get("/books/{$book->id}")
-            ->seeStatusCode(200)
-            ->seeJson([
-                'id' => $book->id,
-                'title' => $book->title,
-                'description' => $book->description,
-                'author' => $book->authors
-            ]);
+        ->get("/books/{$book->id}")
+        ->seeStatusCode(200)
+        ->seeJson([
+            'id' => $book->id,
+            'title' => $book->title,
+            'description' => $book->description,
+            'author' => $book->author
+        ]);
         $data = json_decode($this->response->getContent(), true);
         $this->assertArrayHasKey('created_at', $data);
         $this->assertArrayHasKey('updated_at', $data);
     }
-
-    /** @test **/
+    
+    /** @test  */
     public function show_should_fail_when_the_book_id_does_not_exist()
     {
         $this
@@ -55,8 +56,8 @@ class BooksControllerTest extends TestCase
                 ]
             ]);
     }
-
-    /** @test **/
+    
+    /** @test */
     public function show_route_should_not_match_an_invalid_route()
     {
         $this->get('/books/this-is-invalid');
@@ -66,8 +67,8 @@ class BooksControllerTest extends TestCase
             'BooksController@show route matching when it should not.'
         );
     }
-
-    /** @test **/
+    
+    /** @test */
     public function store_should_save_new_book_in_the_database()
     {
         $this->post('/books', [
@@ -79,7 +80,7 @@ class BooksControllerTest extends TestCase
             ->seeJson(['created' => true])
             ->seeInDatabase('books', ['title' => 'The Invisible Man']);
     }
-
+    
     /** @test */
     public function store_should_respond_with_a_201_and_location_header_when_successful()
     {
@@ -92,23 +93,21 @@ class BooksControllerTest extends TestCase
             ->seeStatusCode(201)
             ->seeHeaderWithRegExp('Location', '#/books/[\d]+$#');
     }
-
-    /** @test **/
+    
+    /** @test */
     public function update_should_only_change_fillable_fields()
     {
-        $book = factory('App\Book')->create([
+        $book = ModelFactory::new()->create([
             'title' => 'War of the Worlds',
             'description' => 'A science fiction masterpiece about Martians invading London',
-            'author' => 'H. G. Wells',
+            'author' => 'H.G Wells'
         ]);
-
         $this->put("/books/{$book->id}", [
             'id' => 5,
             'title' => 'The War of the Worlds',
             'description' => 'The book is way better than the movie.',
             'author' => 'Wells, H. G.'
         ]);
-
         $this
             ->seeStatusCode(200)
             ->seeJson([
@@ -121,8 +120,8 @@ class BooksControllerTest extends TestCase
                 'title' => 'The War of the Worlds'
             ]);
     }
-
-    /** @test **/
+    
+    /** @test */
     public function update_should_fail_with_an_invalid_id()
     {
         $this
@@ -134,26 +133,26 @@ class BooksControllerTest extends TestCase
                 ]
             ]);
     }
-
-    /** @test **/
+    
+    /** @test */
     public function update_should_not_match_an_invalid_route()
     {
         $this->put('/books/this-is-invalid')
-            ->seeStatusCode(404);
+        ->seeStatusCode(404);
     }
-
-    /** @test **/
+    
+    /** @test */
     public function destroy_should_remove_a_valid_book()
     {
-        $book = factory('App\Book')->create();
+        $book = ModelFactory::new()->create();
         $this
             ->delete("/books/{$book->id}")
             ->seeStatusCode(204)
             ->isEmpty();
         $this->notSeeInDatabase('books', ['id' => $book->id]);
     }
-
-    /** @test **/
+    
+    /** @test */
     public function destroy_should_return_a_404_with_an_invalid_id()
     {
         $this
@@ -165,10 +164,11 @@ class BooksControllerTest extends TestCase
                 ]
             ]);
     }
-    /** @test **/
+    
+    /** @test */
     public function destroy_should_not_match_an_invalid_route()
     {
         $this->delete('/books/this-is-invalid')
-            ->seeStatusCode(404);
+        ->seeStatusCode(404);
     }
 }

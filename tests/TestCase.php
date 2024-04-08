@@ -4,7 +4,7 @@ namespace Tests;
 
 use Laravel\Lumen\Testing\TestCase as BaseTestCase;
 
-abstract class TestCase extends BaseTestCase
+class TestCase extends BaseTestCase
 {
     /**
      * Creates the application.
@@ -30,7 +30,6 @@ abstract class TestCase extends BaseTestCase
         );
         return $this;
     }
-
     /**
      * Asserts that the response header matches a given regular expression
      *

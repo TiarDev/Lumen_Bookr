@@ -2,6 +2,9 @@
 
 namespace App\Exceptions;
 
+
+use Exception;
+use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
@@ -41,14 +44,44 @@ class Handler extends ExceptionHandler
     /**
      * Render an exception into an HTTP response.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Throwable  $exception
+     * @param \Illuminate\Http\Request $request
+     * @param \Exception $e
      * @return \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
      *
      * @throws \Throwable
      */
-    public function render($request, Throwable $exception)
+    public function render($request, Throwable $e)
     {
-        return parent::render($request, $exception);
+        if ($request->expectsJson() && !($e instanceof ValidationException)) {
+            $response = [
+                'message' => (string) $e->getMessage(),
+                'status' => 400
+            ];
+            if ($e instanceof HttpException) {
+                $response['message'] = Response::$statusTexts[$e->getStatusCode()];
+                $response['status'] = $e->getStatusCode();
+            } else if ($e instanceof ModelNotFoundException) {
+                $response['message'] = Response::$statusTexts[Response::HTTP_NOT_FOUND];
+                $response['status'] = Response::HTTP_NOT_FOUND;
+            }
+            if ($this->isDebugMode()) {
+                $response['debug'] = [
+                    'exception' => get_class($e),
+                    'trace' => $e->getTrace()
+                ];
+            }
+            return response()->json(['error' => $response], $response['status']);
+        }
+        return parent::render($request, $e);
+    }
+
+    /**
+     * Determine if the application is in debug mode.
+     *
+     * @return Boolean
+     */
+    public function isDebugMode()
+    {
+        return (Boolean) env('APP_DEBUG');
     }
 }
