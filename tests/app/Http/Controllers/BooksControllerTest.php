@@ -8,35 +8,35 @@ use Tests\TestCase;
 
 class BooksControllerTest extends TestCase
 {
+    use DatabaseMigrations;
     /** @test **/
     public function index_status_code_should_be_200()
     {
         $this->get('/books')->seeStatusCode(200);
     }
+
     /** @test **/
     public function index_should_return_a_collection_of_records()
     {
-        $this
-            ->get('/books')
-            ->seeJson([
-                'title' => 'War of the Worlds'
-            ])
-            ->seeJson([
-                'title' => 'A Wrinkle in Time'
-            ]);
+        $books = Factory('App\Book', 2)->create();
+        $this->get('/books');
+        foreach ($books as $book) {
+            $this->seeJson(['title' => $book->title]);
+        }
     }
 
     /** @test **/
     public function show_should_return_a_valid_book()
     {
+        $book = factory('\App\Book')->create();
         $this
-            ->get('/books/1')
+            ->get("/books/{$book->id}")
             ->seeStatusCode(200)
             ->seeJson([
-                'id' => 1,
-                'title' => 'War of the Worlds',
-                'description' => 'A science fiction masterpiece about Martians invading London',
-                'author' => 'H. G. Wells'
+                'id' => $book->id,
+                'title' => $book->title,
+                'description' => $book->description,
+                'author' => $book->authors
             ]);
         $data = json_decode($this->response->getContent(), true);
         $this->assertArrayHasKey('created_at', $data);
@@ -66,7 +66,7 @@ class BooksControllerTest extends TestCase
             'BooksController@show route matching when it should not.'
         );
     }
-    
+
     /** @test **/
     public function store_should_save_new_book_in_the_database()
     {
@@ -96,15 +96,19 @@ class BooksControllerTest extends TestCase
     /** @test **/
     public function update_should_only_change_fillable_fields()
     {
-        $this->notSeeInDatabase('books', [
-            'title' => 'The War of the Worlds'
+        $book = factory('App\Book')->create([
+            'title' => 'War of the Worlds',
+            'description' => 'A science fiction masterpiece about Martians invading London',
+            'author' => 'H. G. Wells',
         ]);
-        $this->put('/books/1', [
+
+        $this->put("/books/{$book->id}", [
             'id' => 5,
             'title' => 'The War of the Worlds',
             'description' => 'The book is way better than the movie.',
             'author' => 'Wells, H. G.'
         ]);
+
         $this
             ->seeStatusCode(200)
             ->seeJson([
@@ -141,12 +145,14 @@ class BooksControllerTest extends TestCase
     /** @test **/
     public function destroy_should_remove_a_valid_book()
     {
+        $book = factory('App\Book')->create();
         $this
-            ->delete('/books/1')
+            ->delete("/books/{$book->id}")
             ->seeStatusCode(204)
             ->isEmpty();
-        $this->notSeeInDatabase('books', ['id' => 1]);
+        $this->notSeeInDatabase('books', ['id' => $book->id]);
     }
+
     /** @test **/
     public function destroy_should_return_a_404_with_an_invalid_id()
     {
